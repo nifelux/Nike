@@ -1,0 +1,28 @@
+/*
+  Exact LAS-VEGAS layout rebrand: this file intentionally changes only visual treatment.
+  The original DOM, page hierarchy, responsive behavior, and application logic remain intact.
+*/
+:root {
+  --primary-magenta: #090909 !important;
+  --secondary-green: #202020 !important;
+  --secondary-green-light: #404040 !important;
+  --primary-pink: #090909 !important;
+  --accent-pink: #090909 !important;
+  --success-green: #222222 !important;
+  --error-red: #1f1f1f !important;
+  --warning-gold: #4a4a4a !important;
+  --soft-pink: #f5f5f5 !important;
+  --soft-green: #f5f5f5 !important;
+}
+
+html { color-scheme: light; }
+body { background-color: #ffffff !important; color: #111111 !important; }
+img, video, picture { filter: grayscale(100%) contrast(1.04); }
+
+/* Neutrals replace the former brand-accent states while preserving spacing and geometry. */
+[class*="success"], [class*="approved"], [class*="active"] { --status-color: #202020; }
+[class*="danger"], [class*="error"], [class*="rejected"] { --status-color: #222222; }
+[class*="warning"], [class*="pending"] { --status-color: #555555; }
+
+/* Existing buttons retain their original shapes, positions, hover behaviors, and labels. */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #111 !important; outline-offset: 3px; }
