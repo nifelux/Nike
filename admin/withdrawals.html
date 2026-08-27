@@ -1,18 +1,576 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Nike Investor — Blacktop Ledger investment platform concept." />
-    <title>Admin Withdrawals · Nike Investor</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="/assets/media/nike-investor-mark.png" />
-    <link rel="stylesheet" href="/assets/styles.css" />
-  </head>
-  <body data-page="admin-withdrawals" data-mode="admin">
-    <main id="app-root" aria-live="polite"></main>
-    <script type="module" src="/assets/app.js"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Withdrawal Approvals | NIKE INVESTOR Admin</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-magenta: #090909;
+            --secondary-green: #111111;
+            --admin-bg: #F8F9FB;
+            --sidebar-dark: #121212;
+            --card-white: #FFFFFF;
+            --text-main: #1A1A1A;
+            --text-muted: #666666;
+            --border-pink: #eeeeee;
+            --shadow-sm: 0 2px 10px rgba(0,0,0,0.05);
+            --transition: all 0.3s ease;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Quicksand', sans-serif; background: var(--admin-bg); color: var(--text-main); overflow-x: hidden; }
+
+        .admin-wrapper { display: flex; min-height: 100vh; }
+        
+        /* --- SIDEBAR --- */
+        .sidebar { 
+            width: 260px; background: var(--sidebar-dark); color: white; 
+            display: flex; flex-direction: column; position: fixed; 
+            height: 100vh; z-index: 1000; transition: var(--transition);
+        }
+        .sidebar-header { padding: 30px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .logo-text { font-family: 'DM Serif Display', serif; color: var(--primary-magenta); font-size: 22px; }
+        .nav-list { flex: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-item { display: flex; align-items: center; padding: 12px 25px; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 14px; font-weight: 600; transition: var(--transition); }
+        .nav-item:hover, .nav-item.active { color: white; background: rgba(9, 9, 9, 0.1); border-left: 4px solid var(--primary-magenta); }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; margin-left: 260px; padding: 30px; transition: var(--transition); width: calc(100% - 260px); }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+
+        /* --- STATS GRID --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 15px; border: 1px solid var(--border-pink); text-align: center; box-shadow: var(--shadow-sm); }
+        .stat-label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .stat-value { font-size: 18px; font-weight: 700; color: var(--text-main); }
+        .stat-value.pink { color: var(--primary-magenta); }
+        .stat-value.green { color: var(--secondary-green); }
+
+        /* --- CONTROLS --- */
+        .controls-card { background: white; padding: 20px; border-radius: 20px; border: 1px solid var(--border-pink); margin-bottom: 25px; }
+        .filter-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 1024px) { .filter-grid { grid-template-columns: 2fr 1fr 1.2fr 1fr; } }
+        
+        .input-field { width: 100%; padding: 12px 15px; border-radius: 10px; border: 1px solid var(--border-pink); font-family: inherit; font-size: 13px; background: #ffffff; outline: none; }
+        .input-field:focus { border-color: var(--primary-magenta); background: white; }
+
+        /* --- TABLE --- */
+        .table-container { background: white; border-radius: 20px; border: 1px solid var(--border-pink); overflow-x: auto; display: none; }
+        @media (min-width: 1024px) { .table-container { display: block; } }
+        table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+        th { text-align: left; padding: 15px 20px; background: #ffffff; border-bottom: 2px solid var(--border-pink); font-size: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; }
+        td { padding: 15px 20px; border-bottom: 1px solid var(--admin-bg); font-size: 13px; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 50px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+        .status-pending_approval { background: #f5f5f5; color: #484848; border: 1px solid #484848; }
+        .status-approved { background: #f5f5f5; color: #303030; border: 1px solid #303030; }
+        .status-processing { background: #E0E0E0; color: #333; animation: pulse 1.5s infinite; }
+        .status-paid { background: #f5f5f5; color: var(--secondary-green); border: 1px solid var(--secondary-green); }
+        .status-rejected { background: #f5f5f5; color: #191919; border: 1px solid #191919; }
+
+        /* --- MOBILE LIST --- */
+        .mobile-list { display: grid; gap: 15px; }
+        @media (min-width: 1024px) { .mobile-list { display: none; } }
+        .wd-card { background: white; border: 1px solid var(--border-pink); border-radius: 15px; padding: 20px; box-shadow: var(--shadow-sm); }
+        .card-row { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 0; border-bottom: 1px solid #f9f9f9; }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-card { background: white; width: 100%; max-width: 500px; border-radius: 25px; padding: 30px; position: relative; animation: pop 0.3s ease-out; }
+        .modal-close { position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 20px; color: var(--text-muted); }
+        @keyframes pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
+        .detail-label { color: var(--text-muted); font-weight: 600; }
+        .detail-value { font-weight: 700; text-align: right; word-break: break-all; margin-left: 10px; }
+
+        /* --- BUTTONS --- */
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px; }
+        .btn { padding: 12px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; transition: var(--transition); }
+        .btn-approve { background: var(--secondary-green); color: white; }
+        .btn-reject { background: #191919; color: white; }
+        .btn-payout { background: var(--primary-magenta); color: white; grid-column: span 2; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
+        .page-btn { padding: 10px 20px; border: 1px solid var(--border-pink); background: white; border-radius: 10px; cursor: pointer; font-weight: 700; }
+
+        .mobile-toggle { display: none; background: none; border: none; font-size: 24px; cursor: pointer; }
+        @media (max-width: 1024px) {
+            .sidebar { left: -260px; }
+            .sidebar.active { left: 0; }
+            .main-content { margin-left: 0; width: 100%; }
+            .mobile-toggle { display: block; }
+        }
+
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    </style>
+    <link rel="stylesheet" href="../assets/nike-monochrome.css">
+</head>
+<body>
+
+    <div class="admin-wrapper">
+        <aside class="sidebar" id="adminSidebar">
+            <div class="sidebar-header">
+                <div class="logo-text">NIKE INVESTOR ADMIN</div>
+            </div>
+            <nav class="nav-list">
+                <a href="index.html" class="nav-item">📊 Dashboard</a>
+                <a href="users.html" class="nav-item">👥 Users</a>
+                <a href="plans.html" class="nav-item">📈 Plans</a>
+                <a href="investments.html" class="nav-item">💰 Investments</a>
+                <a href="earnings.html" class="nav-item">💸 Earnings</a>
+                <a href="deposits.html" class="nav-item">📥 Deposits</a>
+                <a href="withdrawals.html" class="nav-item active">📤 Withdrawals</a>
+                <a href="transactions.html" class="nav-item">📜 Transactions</a>
+                <a href="#" id="logoutBtn" class="nav-item" style="margin-top: 20px; color: #2b2b2b;">🚪 Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <button class="mobile-toggle" id="menuBtn">☰</button>
+                    <h1 style="margin: 0; font-family: 'DM Serif Display', serif;">Withdrawals Audit</h1>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="page-btn" id="lockToggleBtn" style="font-weight:800;">Loading…</button>
+                    <button class="page-btn" onclick="location.reload()">🔄 Refresh</button>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Pending Total</span>
+                    <span class="stat-value pink" id="stat-pending">₦0.00</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Approved & Ready</span>
+                    <span class="stat-value" id="stat-approved">₦0.00</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Net Paid Out</span>
+                    <span class="stat-value green" id="stat-paid">₦0.00</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total Fees Earned</span>
+                    <span class="stat-value" id="stat-fees">₦0.00</span>
+                </div>
+            </div>
+
+            <div class="controls-card">
+                <div class="filter-grid">
+                    <input type="text" id="searchInput" class="input-field" placeholder="Search User, ID or Payout Ref...">
+                    <select id="filterStatus" class="input-field">
+                        <option value="ALL">All Lifecycle States</option>
+                        <option value="PENDING">Pending Review</option>
+                        <option value="APPROVED">Approved (Wait Payout)</option>
+                        <option value="PROCESSING">Processing</option>
+                        <option value="PAID">Paid (Completed)</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                    <input type="date" id="filterDate" class="input-field" title="Request Date">
+                    <select id="sortBy" class="input-field">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="amount-high">Highest Amount</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Withdrawal ID</th>
+                            <th>Requested</th>
+                            <th>15% Fee</th>
+                            <th>Net Payout</th>
+                            <th>Account Type</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="withdraw-table-body">
+                        <tr><td colspan="8" style="text-align:center;">Loading requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mobile-list" id="withdraw-mobile-list"></div>
+
+            <div class="pagination">
+                <span id="pageInfo" style="font-size: 12px; color: var(--text-muted);">Showing -- to -- of --</span>
+                <div style="display: flex; gap: 10px;">
+                    <button class="page-btn" id="prevBtn" disabled>Previous</button>
+                    <button class="page-btn" id="nextBtn">Next</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Review Drawer/Modal -->
+    <div class="modal-overlay" id="review-modal">
+        <div class="modal-card">
+            <span class="modal-close" id="modal-close">✕</span>
+            <h3 class="brand-font" style="margin-top: 0; color: var(--primary-magenta);">Withdrawal Review</h3>
+            
+            <div id="modal-content">
+                <!-- Content injected via JS -->
+            </div>
+
+            <div id="action-area">
+                <!-- Actions injected via JS based on status -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+        const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+        const WithManager = {
+            currentPage: 0,
+            pageSize: 20,
+            totalCount: 0,
+
+            async init() {
+                // Admin session guard
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return window.location.href = 'login.html';
+
+                const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single();
+                if (!profile || !profile.is_admin) return window.location.href = 'login.html';
+
+                this.setupUI();
+                await this.fetchLockState();
+                await this.fetchStats();
+                await this.fetchWithdrawals();
+            },
+
+            // ---------------------------------------------------------------
+            // Platform-wide withdrawal lock — a single toggle stored as the
+            // 'withdrawals_locked' key in public.settings ('true'/'false').
+            // When locked, /api/finance withdraw action rejects every new
+            // withdrawal request platform-wide, regardless of who submits it.
+            // ---------------------------------------------------------------
+            withdrawalsLocked: false,
+
+            async fetchLockState() {
+                try {
+                    const { data } = await this.callAdminApi('admin', null, 'settings', 'GET');
+                    const row = (data || []).find(s => s.key === 'withdrawals_locked');
+                    this.withdrawalsLocked = row?.value === 'true';
+                } catch (e) {
+                    console.error('Could not load withdrawal lock state:', e);
+                }
+                this.renderLockButton();
+            },
+
+            renderLockButton() {
+                const btn = document.getElementById('lockToggleBtn');
+                if (this.withdrawalsLocked) {
+                    btn.innerText = '🔒 WITHDRAWALS LOCKED — Tap to Unlock';
+                    btn.style.background = '#f5f5f5';
+                    btn.style.color = '#191919';
+                    btn.style.borderColor = '#191919';
+                } else {
+                    btn.innerText = '🔓 Withdrawals Open — Tap to Lock';
+                    btn.style.background = '#f5f5f5';
+                    btn.style.color = 'var(--secondary-green)';
+                    btn.style.borderColor = 'var(--secondary-green)';
+                }
+            },
+
+            async toggleWithdrawalLock() {
+                const next = !this.withdrawalsLocked;
+                const label = next ? 'LOCK' : 'UNLOCK';
+                if (!confirm(`${label} withdrawals platform-wide? ${next ? 'Users will be unable to submit new withdrawal requests until you unlock this again.' : 'Users will be able to submit new withdrawal requests again.'}`)) return;
+
+                const btn = document.getElementById('lockToggleBtn');
+                btn.disabled = true;
+                btn.innerText = 'Saving…';
+
+                try {
+                    await this.callAdminApi('update', {
+                        updates: [{ key: 'withdrawals_locked', value: next ? 'true' : 'false' }]
+                    }, 'settings');
+                    this.withdrawalsLocked = next;
+                    this.renderLockButton();
+                } catch (e) {
+                    alert(`Could not update withdrawal lock: ${e.message}`);
+                    this.renderLockButton();
+                } finally {
+                    btn.disabled = false;
+                }
+            },
+
+            setupUI() {
+                document.getElementById('menuBtn').onclick = () => document.getElementById('adminSidebar').classList.toggle('active');
+                document.getElementById('lockToggleBtn').onclick = () => this.toggleWithdrawalLock();
+                document.getElementById('logoutBtn').onclick = () => supabase.auth.signOut().then(() => window.location.href = 'login.html');
+                document.getElementById('modal-close').onclick = () => document.getElementById('review-modal').style.display = 'none';
+
+                const reload = () => { this.currentPage = 0; this.fetchWithdrawals(); };
+                document.getElementById('searchInput').oninput = this.debounce(reload, 500);
+                ['filterStatus', 'filterDate', 'sortBy'].forEach(id => {
+                    document.getElementById(id).onchange = reload;
+                });
+
+                document.getElementById('nextBtn').onclick = () => { this.currentPage++; this.fetchWithdrawals(); };
+                document.getElementById('prevBtn').onclick = () => { this.currentPage--; this.fetchWithdrawals(); };
+            },
+
+            async fetchStats() {
+                const { data: sums } = await supabase.from('withdrawals').select('amount, fee, net_amount, status');
+                if (!sums) return;
+
+                const t = { pending: 0, approved: 0, paid: 0, fees: 0 };
+                sums.forEach(w => {
+                    if (w.status === 'pending_approval') t.pending += Number(w.amount);
+                    if (w.status === 'approved' || w.status === 'processing') t.approved += Number(w.net_amount);
+                    if (w.status === 'paid') {
+                        t.paid += Number(w.net_amount);
+                        t.fees += Number(w.fee);
+                    }
+                });
+
+                document.getElementById('stat-pending').innerText = this.formatCurrency(t.pending);
+                document.getElementById('stat-approved').innerText = this.formatCurrency(t.approved);
+                document.getElementById('stat-paid').innerText = this.formatCurrency(t.paid);
+                document.getElementById('stat-fees').innerText = this.formatCurrency(t.fees);
+            },
+
+            async fetchWithdrawals() {
+                const search = document.getElementById('searchInput').value.trim();
+                const status = document.getElementById('filterStatus').value;
+                const date = document.getElementById('filterDate').value;
+                const sort = document.getElementById('sortBy').value;
+
+                let query = supabase.from('withdrawals').select('*, profiles(full_name, id), withdrawal_accounts(*)', { count: 'exact' });
+
+                if (status !== 'ALL') query = query.eq('status', status);
+                if (date) query = query.gte('created_at', `${date}T00:00:00`).lte('created_at', `${date}T23:59:59`);
+                if (search) query = query.or(`reference.ilike.%${search}%,payout_reference.ilike.%${search}%`);
+
+                if (sort === 'newest') query = query.order('created_at', { ascending: false });
+                else if (sort === 'oldest') query = query.order('created_at', { ascending: true });
+                else if (sort === 'amount-high') query = query.order('amount', { ascending: false });
+
+                const from = this.currentPage * this.pageSize;
+                const { data, count, error } = await query.range(from, from + this.pageSize - 1);
+
+                if (!error) {
+                    this.totalCount = count;
+                    this.renderWithdrawals(data);
+                    this.updatePagination();
+                }
+            },
+
+            renderWithdrawals(data) {
+                const tbody = document.getElementById('withdraw-table-body');
+                const mList = document.getElementById('withdraw-mobile-list');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">No requests match filters.</td></tr>';
+                    mList.innerHTML = '<p style="text-align:center; color:#999;">No records found.</p>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(w => `
+                    <tr>
+                        <td><a href="user-details.html?id=${w.user_id}" class="user-link">${w.profiles?.full_name || 'User'}</a></td>
+                        <td style="font-family:monospace; font-weight:700;">WD-${w.id.substring(0,6).toUpperCase()}</td>
+                        <td style="font-weight:700;">${this.formatCurrency(w.amount)}</td>
+                        <td class="neg">${this.formatCurrency(w.fee)}</td>
+                        <td class="green" style="font-weight:700;">${this.formatCurrency(w.net_amount)}</td>
+                        <td style="font-size:11px;">${w.withdrawal_accounts?.provider_name || 'N/A'}</td>
+                        <td><span class="status-badge status-${w.status}">${w.status}</span></td>
+                        <td><button class="page-btn" style="padding:5px 12px; font-size:10px;" onclick="window.WithManager.showReview('${w.id}')">REVIEW</button></td>
+                    </tr>
+                `).join('');
+
+                mList.innerHTML = data.map(w => `
+                    <div class="wd-card">
+                        <div class="card-row"><span>User</span> <b class="user-link">${w.profiles?.full_name}</b></div>
+                        <div class="card-row"><span>Ref</span> <b>WD-${w.id.substring(0,6).toUpperCase()}</b></div>
+                        <div class="card-row"><span>Net Payout</span> <b class="green">${this.formatCurrency(w.net_amount)}</b></div>
+                        <div class="card-row"><span>Status</span> <span class="status-badge status-${w.status}">${w.status}</span></div>
+                        <button class="page-btn" style="width:100%; margin-top:10px;" onclick="window.WithManager.showReview('${w.id}')">AUDIT & ACTION</button>
+                    </div>
+                `).join('');
+
+                this.cachedData = data;
+            },
+
+            showReview(id) {
+                const w = this.cachedData.find(item => item.id === id);
+                if (!w) return;
+
+                const content = document.getElementById('modal-content');
+                const actions = document.getElementById('action-area');
+
+                content.innerHTML = `
+                    <div class="detail-row"><span class="detail-label">Withdrawal Ref</span><span class="detail-value">WD-${w.id.toUpperCase()}</span></div>
+                    <div class="detail-row"><span class="detail-label">Requested Amount</span><span class="detail-value">${this.formatCurrency(w.amount)}</span></div>
+                    <div class="detail-row"><span class="detail-label">Transaction Fee (15%)</span><span class="detail-value neg">${this.formatCurrency(w.fee)}</span></div>
+                    <div class="detail-row" style="background:#f5f5f5; padding:10px; border-radius:10px;"><span class="detail-label">Authorized Payout</span><span class="detail-value green" style="font-size:16px;">${this.formatCurrency(w.net_amount)}</span></div>
+                    
+                    <h4 style="margin:20px 0 10px 0; font-size:13px; color:var(--primary-magenta);">PAYOUT DESTINATION</h4>
+                    <div class="detail-row"><span class="detail-label">Bank Name</span><span class="detail-value">${w.withdrawal_accounts?.provider_name || 'N/A'}</span></div>
+                    <div class="detail-row"><span class="detail-label">Account Name</span><span class="detail-value">${w.withdrawal_accounts?.account_name || 'N/A'}</span></div>
+                    <div class="detail-row"><span class="detail-label">Account Number</span><span class="detail-value">${w.withdrawal_accounts?.account_number || '—'}</span></div>
+                    
+                    <div class="detail-row"><span class="detail-label">Status</span><span class="status-badge status-${w.status}">${w.status}</span></div>
+                    <div class="detail-row"><span class="detail-label">Request Date</span><span class="detail-value">${new Date(w.created_at).toLocaleString()}</span></div>
+                `;
+
+                if (String(w.status).toUpperCase() === 'PENDING_APPROVAL' || String(w.status).toUpperCase() === 'PENDING') {
+                    actions.innerHTML = `
+                        <div class="btn-group">
+                            <button class="btn btn-reject" onclick="window.WithManager.handleReject('${w.id}')">REJECT</button>
+                            <button class="btn btn-approve" onclick="window.WithManager.handleApprove('${w.id}')">APPROVE</button>
+                        </div>
+                    `;
+                } else if (String(w.status).toUpperCase() === 'APPROVED') {
+                    actions.innerHTML = `
+                        <div class="btn-group">
+                            <button class="btn btn-payout" onclick="window.WithManager.handlePayout('${w.id}')">MARK AS PAID</button>
+                        </div>
+                    `;
+                } else {
+                    actions.innerHTML = `<p style="text-align:center; color:#999; margin-top:20px; font-size:12px;">Lifecycle completed. No further actions available.</p>`;
+                }
+
+                document.getElementById('review-modal').style.display = 'flex';
+            },
+
+            // Returns the Authorization header for calling the secure /api/admin
+            // backend, which uses the Supabase service role key server-side and
+            // runs the admin_approve_withdrawal / admin_reject_withdrawal RPCs
+            // and the real GloPayment payout call — never done from the browser.
+            async getAuthHeader() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) throw new Error('Session expired. Please log in again.');
+                return { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' };
+            },
+
+            async callAdminApi(action, body, resource = 'admin', method = 'POST') {
+                const headers = await this.getAuthHeader();
+                const opts = { method, headers };
+                if (method !== 'GET') opts.body = JSON.stringify(body);
+                const res = await fetch(`/api/admin?resource=${resource}&action=${action}`, opts);
+                const result = await res.json();
+                if (!res.ok || !result.success) {
+                    throw new Error(result.message || 'Request failed');
+                }
+                return result;
+            },
+
+            async handleApprove(id) {
+                if (!confirm('Are you sure you want to approve this withdrawal?')) return;
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerText = 'PROCESSING...';
+
+                try {
+                    const result = await this.callAdminApi('approve-withdrawal', { id });
+                    alert(result.message || 'Withdrawal approved.');
+                    location.reload();
+                } catch (e) {
+                    alert(`Could not approve withdrawal: ${e.message}`);
+                    console.error('Approve withdrawal failed:', e);
+                    btn.disabled = false;
+                    btn.innerText = 'APPROVE';
+                }
+            },
+
+            async handleReject(id) {
+                const reason = prompt('Enter a reason for rejecting this withdrawal (shown to the user):');
+                if (reason === null) return; // cancelled
+                if (!reason.trim()) return alert('A rejection reason is required.');
+
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerText = 'PROCESSING...';
+
+                try {
+                    const result = await this.callAdminApi('reject-withdrawal', { id, reason: reason.trim() });
+                    alert(result.message || 'Withdrawal rejected and funds released.');
+                    location.reload();
+                } catch (e) {
+                    alert(`Could not reject withdrawal: ${e.message}`);
+                    console.error('Reject withdrawal failed:', e);
+                    btn.disabled = false;
+                    btn.innerText = 'REJECT';
+                }
+            },
+
+            async handlePayout(id) {
+                const reference = prompt('Enter the payout reference for this transfer (e.g. your bank transfer ID or receipt number):');
+                if (reference === null) return; // cancelled
+                if (!reference.trim()) return alert('A payout reference is required.');
+
+                if (!confirm('Confirm you have manually sent this payment to the beneficiary. Mark as paid?')) return;
+
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerText = 'SAVING...';
+
+                try {
+                    const result = await this.callAdminApi('mark-withdrawal-paid', { id, payout_reference: reference.trim() });
+                    alert(result.message || 'Withdrawal marked as paid.');
+                    location.reload();
+                } catch (e) {
+                    alert(`Could not mark as paid: ${e.message}`);
+                    console.error('Mark withdrawal paid failed:', e);
+                    btn.disabled = false;
+                    btn.innerText = 'MARK AS PAID';
+                }
+            },
+
+            async logAudit(action, targetId, details = {}) {
+                const { data: { user } } = await supabase.auth.getUser();
+                await supabase.from('admin_audit_logs').insert({
+                    admin_id: user.id,
+                    action: action,
+                    target_type: 'WITHDRAWAL',
+                    target_id: targetId,
+                    details: details
+                });
+            },
+
+            updatePagination() {
+                const from = this.currentPage * this.pageSize + 1;
+                const to = Math.min((this.currentPage + 1) * this.pageSize, this.totalCount);
+                document.getElementById('pageInfo').innerText = `Showing ${from}-${to} of ${this.totalCount}`;
+                document.getElementById('prevBtn').disabled = this.currentPage === 0;
+                document.getElementById('nextBtn').disabled = to >= this.totalCount;
+            },
+
+            formatCurrency(val) {
+                return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(val);
+            },
+
+            debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+        };
+
+        window.WithManager = WithManager;
+        document.addEventListener('DOMContentLoaded', () => WithManager.init());
+    </script>
+</body>
 </html>
