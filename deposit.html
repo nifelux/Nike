@@ -1,18 +1,150 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Nike Investor — Blacktop Ledger investment platform concept." />
-    <title>Deposit · Nike Investor</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="/assets/media/nike-investor-mark.png" />
-    <link rel="stylesheet" href="/assets/styles.css" />
-  </head>
-  <body data-page="deposit" data-mode="member">
-    <main id="app-root" aria-live="polite"></main>
-    <script type="module" src="/assets/app.js"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Deposit | NIKE INVESTOR</title>
+    <style>
+        :root {
+            --pink: #090909;
+            --green: #111111;
+            --bg: #f7f7f7;
+        }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .card { background: white; border-radius: 20px; border: 1px solid #eeeeee; padding: 25px; box-shadow: 0 10px 30px rgba(9, 9, 9, 0.05); }
+        .btn-pay { background: var(--pink); color: white; border: none; padding: 16px; border-radius: 50px; width: 100%; font-weight: 700; cursor: pointer; }
+        .btn-pay:disabled { opacity: 0.7; cursor: not-allowed; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 800; }
+        .status-pending { background: #f5f5f5; color: #484848; }
+        .status-completed { background: #f5f5f5; color: var(--green); }
+        .input-group { margin: 20px 0; }
+        input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #eeeeee; font-size: 16px; box-sizing: border-box; }
+        .error-text { color: #252525; font-size: 13px; margin-top: 8px; display: none; }
+        .notice { background: #ffffff; border: 1px solid #eeeeee; border-radius: 14px; padding: 15px; margin: 18px 0; color: #555; font-size: 13px; line-height: 1.5; }
+        .bank-details { margin-top: 12px; background: #f7f7f7; border-radius: 14px; padding: 15px; }
+        .bank-row { display: flex; justify-content: space-between; gap: 15px; padding: 8px 0; border-bottom: 1px solid #eeeeee; }
+        .bank-row:last-child { border-bottom: 0; }
+        .bank-label { color: #777; }
+        .bank-value { color: #222; font-weight: 800; text-align: right; }
+        .btn-copy { background: var(--green); color: white; border: none; padding: 12px 16px; border-radius: 50px; width: 100%; font-weight: 700; cursor: pointer; margin-top: 12px; }
+        .field-label { display: block; font-weight: 700; color: var(--pink); margin-bottom: 6px; }
+    </style>
+    <link rel="stylesheet" href="assets/nike-monochrome.css">
+</head>
+<body>
+    <div class="card">
+        <h2 style="color: var(--pink); margin-top: 0;">Deposit Funds</h2>
+        <p style="color: #666; font-size: 14px;">Add funds manually via bank transfer. Your deposit will be reviewed by an administrator before it is credited.</p>
+
+        <div class="notice">
+            Transfer your deposit to the account below, then contact support with your transfer receipt and the amount sent.
+            <div class="bank-details">
+                <div class="bank-row"><span class="bank-label">Account No.</span><span class="bank-value">4580003805</span></div>
+                <div class="bank-row"><span class="bank-label">Bank</span><span class="bank-value">Fidelity Bank</span></div>
+                <div class="bank-row"><span class="bank-label">Account Name</span><span class="bank-value">AMISU ELIJAH</span></div>
+                <button class="btn-copy" id="copy-account-btn" type="button">COPY ACCOUNT NUMBER</button>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label class="field-label" for="deposit-amount">Amount (₦)</label>
+            <input type="number" id="deposit-amount" placeholder="Minimum 1,000" min="1000" step="0.01">
+        </div>
+
+        <div class="input-group">
+            <label class="field-label" for="depositor-bank-name">Your Bank Name</label>
+            <input type="text" id="depositor-bank-name" placeholder="e.g. Fidelity Bank" maxlength="120" autocomplete="organization">
+        </div>
+
+        <div class="input-group">
+            <label class="field-label" for="depositor-account-name">Name on Your Bank Account</label>
+            <input type="text" id="depositor-account-name" placeholder="Enter the name on the sending account" maxlength="120" autocomplete="name">
+        </div>
+
+        <button class="btn-pay" id="confirm-btn">SUBMIT DEPOSIT FOR REVIEW</button>
+        <div id="error-text" class="error-text"></div>
+
+        <div id="status-area" style="margin-top: 30px; display: none;">
+            <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 20px;">
+            <span id="status-message" style="font-size: 13px; color: #666;">Your manual deposit has been marked for administrator review. Please send your transfer receipt to support.</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+        const confirmBtn = document.getElementById('confirm-btn');
+        const copyAccountBtn = document.getElementById('copy-account-btn');
+        const errorText = document.getElementById('error-text');
+        const statusArea = document.getElementById('status-area');
+        const statusMessage = document.getElementById('status-message');
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorText.style.display = 'block';
+        }
+
+        function resetButton() {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'SUBMIT DEPOSIT FOR REVIEW';
+        }
+
+        copyAccountBtn.onclick = async () => {
+            try {
+                await navigator.clipboard.writeText('4580003805');
+                copyAccountBtn.textContent = 'ACCOUNT NUMBER COPIED';
+                setTimeout(() => { copyAccountBtn.textContent = 'COPY ACCOUNT NUMBER'; }, 2000);
+            } catch (error) {
+                showError('Could not copy the account number. Please copy it manually.');
+            }
+        };
+
+        confirmBtn.onclick = async () => {
+            errorText.style.display = 'none';
+
+            const amount = Number(document.getElementById('deposit-amount').value);
+            const bankName = document.getElementById('depositor-bank-name').value.trim();
+            const accountName = document.getElementById('depositor-account-name').value.trim();
+
+            if (!amount || amount < 1000) {
+                showError('Minimum deposit is ₦1,000');
+                return;
+            }
+            if (!bankName || !accountName) {
+                showError('Enter the bank name and the name on the sending bank account');
+                return;
+            }
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                showError('Your session has expired. Please log in again.');
+                return;
+            }
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'SUBMITTING...';
+
+            try {
+                const response = await fetch('/api/finance?resource=payments&action=submit-manual-deposit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({ amount, bank_name: bankName, account_name: accountName })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || 'Could not submit the deposit');
+
+                confirmBtn.textContent = 'DEPOSIT SUBMITTED';
+                statusMessage.textContent = `Deposit ${data.reference} is pending administrator approval. Please send your transfer receipt to support.`;
+                statusArea.style.display = 'block';
+            } catch (error) {
+                showError(error.message);
+                resetButton();
+            }
+        };
+    </script>
+</body>
 </html>

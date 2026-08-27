@@ -1,18 +1,470 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Nike Investor — Blacktop Ledger investment platform concept." />
-    <title>Dashboard · Nike Investor</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="/assets/media/nike-investor-mark.png" />
-    <link rel="stylesheet" href="/assets/styles.css" />
-  </head>
-  <body data-page="dashboard" data-mode="member">
-    <main id="app-root" aria-live="polite"></main>
-    <script type="module" src="/assets/app.js"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard | NIKE INVESTOR</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-magenta: #090909;
+            --primary-magenta-dark: #161616;
+            --secondary-green: #111111;
+            --secondary-green-light: #222222;
+            --bg-soft-white: #f7f7f7;
+            --card-white: #FFFFFF;
+            --text-main: #1A1A1A;
+            --text-muted: #666666;
+            --border-pink: #eeeeee;
+            --nav-black: #121212;
+            --shadow-soft: 0 4px 20px rgba(9, 9, 9, 0.06);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Quicksand', sans-serif;
+            background-color: var(--bg-soft-white);
+            color: var(--text-main);
+            background-image: radial-gradient(var(--border-pink) 0.5px, transparent 0.5px);
+            background-size: 30px 30px;
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+
+        .skeleton { background: #eee; background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%); border-radius: 5px; background-size: 200% 100%; animation: 1.5s shine linear infinite; }
+        @keyframes shine { to { background-position-x: -200%; } }
+
+        .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 10px 0; }
+        .user-greeting h1 { font-family: 'DM Serif Display', serif; font-size: 24px; margin: 0; color: var(--text-main); }
+        .user-greeting p { font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0; }
+        .top-icons { display: flex; gap: 15px; }
+        .icon-btn { width: 40px; height: 40px; border-radius: 50%; background: white; border: 1px solid var(--border-pink); display: flex; align-items: center; justify-content: center; color: var(--primary-magenta); cursor: pointer; position: relative; }
+        .badge { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background: var(--primary-magenta); border-radius: 50%; border: 2px solid white; }
+
+        .balance-hero {
+            background: linear-gradient(135deg, var(--primary-magenta), #2a2a2a);
+            border-radius: 25px; padding: 30px; color: white; margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(9, 9, 9, 0.15);
+            position: relative; overflow: hidden;
+        }
+        .balance-hero::after { content: "✦"; position: absolute; right: 20px; top: 10px; font-size: 80px; opacity: 0.1; }
+        .balance-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; opacity: 0.9; }
+        .balance-value { font-size: 36px; font-weight: 700; margin: 10px 0 25px 0; }
+        .hero-actions { display: flex; gap: 12px; }
+        .action-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition); }
+        .btn-white { background: white; color: var(--primary-magenta); }
+        .btn-outline-white { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 20px; border: 1px solid var(--border-pink); box-shadow: var(--shadow-soft); }
+        .stat-card .label { font-size: 10px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 5px; }
+        .stat-card .value { font-size: 18px; font-weight: 700; color: var(--secondary-green); }
+
+        .sec-header { display: flex; justify-content: space-between; align-items: center; margin: 30px 0 15px 0; }
+        .sec-header h2 { font-family: 'DM Serif Display', serif; font-size: 20px; margin: 0; }
+        .sec-header a { font-size: 13px; color: var(--primary-magenta); font-weight: 700; text-decoration: none; }
+
+        .quick-actions { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .quick-actions::-webkit-scrollbar { display: none; }
+        .qa-item { flex: 0 0 auto; background: white; padding: 12px 20px; border-radius: 100px; border: 1px solid var(--border-pink); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-soft); }
+
+        .table-card { background: white; border-radius: 20px; border: 1px solid var(--border-pink); overflow: hidden; box-shadow: var(--shadow-soft); }
+        .tr-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--bg-soft-white); }
+        .tr-row:last-child { border-bottom: none; }
+        .tr-info h4 { margin: 0; font-size: 14px; font-weight: 700; }
+        .tr-info span { font-size: 11px; color: var(--text-muted); }
+        .tr-amt { font-weight: 700; font-size: 14px; }
+        .amt-pos { color: var(--secondary-green); }
+        .amt-neg { color: #191919; }
+
+        .refer-card { background: #101010; color: white; padding: 25px; border-radius: 25px; margin-top: 30px; position: relative; }
+        .refer-card h3 { font-family: 'DM Serif Display', serif; margin: 0 0 10px 0; color: var(--primary-magenta); }
+        .refer-card p { font-size: 13px; opacity: 0.8; margin-bottom: 20px; }
+        .ref-code-box { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px dashed rgba(255,255,255,0.3); }
+        .ref-code { font-family: monospace; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+        .copy-btn { color: var(--primary-magenta); font-weight: 700; font-size: 12px; cursor: pointer; background: none; border: none; text-transform: uppercase; }
+
+        .nav-island {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--nav-black); height: 65px; width: 90%; max-width: 400px;
+            border-radius: 100px; display: flex; justify-content: space-around; align-items: center;
+            padding: 0 10px; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #666; text-decoration: none; transition: var(--transition); }
+        .nav-item.active { color: var(--primary-magenta); }
+        .nav-item span { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .nav-icon { font-size: 20px; }
+
+        .sidebar { position: fixed; top: 0; left: -100%; width: 280px; height: 100%; background: white; z-index: 2000; transition: var(--transition); padding: 30px; box-shadow: 10px 0 40px rgba(0,0,0,0.1); }
+        .sidebar.active { left: 0; }
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1500; display: none; }
+        .sb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .sb-nav { display: flex; flex-direction: column; gap: 15px; }
+        .sb-link { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text-main); font-weight: 600; font-size: 15px; padding: 10px; border-radius: 10px; transition: var(--transition); }
+        .sb-link:hover { background: var(--bg-soft-white); color: var(--primary-magenta); }
+        .sb-link.logout { color: #191919; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+
+        /* --- ADMIN BANNER (injected by admin-view.js, styled to match brand) --- */
+        #admin-mode-banner a { transition: var(--transition); }
+
+        @media (min-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(4, 1fr); }
+            .dashboard-container { padding: 40px; }
+            .nav-island { display: none; }
+        }
+        /* --- TELEGRAM PROMPT --- */
+        .tg-modal-backdrop {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            z-index: 3000; align-items: center; justify-content: center; padding: 20px;
+            backdrop-filter: blur(2px);
+        }
+        .tg-modal-backdrop.active { display: flex; }
+        .tg-modal-box {
+            background: linear-gradient(160deg, #FFFFFF 0%, #FFF5F9 100%);
+            border-radius: 24px; padding: 30px 26px; width: 100%; max-width: 380px;
+            box-shadow: 0 20px 60px rgba(9, 9, 9, 0.25);
+            border: 1px solid var(--border-pink, #eeeeee);
+            text-align: center; position: relative;
+            animation: tgPopIn 0.35s ease;
+        }
+        @keyframes tgPopIn {
+            from { opacity: 0; transform: scale(0.92) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .tg-icon {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: linear-gradient(135deg, #090909, #161616);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px auto; box-shadow: 0 8px 20px rgba(9, 9, 9, 0.35);
+        }
+        .tg-icon svg { width: 30px; height: 30px; fill: white; }
+        .tg-modal-box h3 {
+            font-family: 'DM Serif Display', serif; color: var(--primary-magenta, #090909);
+            font-size: 22px; margin: 0 0 8px 0;
+        }
+        .tg-modal-box .tg-sub {
+            font-size: 13px; color: #666; margin: 0 0 22px 0; line-height: 1.5;
+        }
+        .tg-btn-row { display: flex; flex-direction: column; gap: 10px; }
+        .tg-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px; border-radius: 50px; font-weight: 700; font-size: 14px;
+            text-decoration: none; cursor: pointer; border: none;
+            transition: transform 0.15s ease;
+        }
+        .tg-btn:active { transform: scale(0.97); }
+        .tg-btn-group {
+            background: linear-gradient(135deg, #090909, #161616); color: white;
+            box-shadow: 0 6px 16px rgba(9, 9, 9, 0.3);
+        }
+        .tg-btn-channel {
+            background: white; color: var(--primary-magenta, #090909);
+            border: 1.5px solid var(--border-pink, #eeeeee);
+        }
+        .tg-skip {
+            display: block; margin: 18px auto 0 auto; background: none; border: none;
+            color: #999; font-size: 12px; font-weight: 600; cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+    <link rel="stylesheet" href="assets/nike-monochrome.css">
+</head>
+<body>
+
+    <!-- Telegram Community Prompt — shown once per session after login/signup -->
+    <div class="tg-modal-backdrop" id="tg-modal-backdrop">
+        <div class="tg-modal-box">
+            <div class="tg-icon">
+                <svg viewBox="0 0 24 24"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.92c-.23.23-.42.42-.82.42z"/></svg>
+            </div>
+            <h3>Join Our Telegram!</h3>
+            <p class="tg-sub">
+                Get instant updates on new plans, bonuses, payout alerts, and platform news.
+                Join our community and never miss an update from NIKE INVESTOR.
+            </p>
+            <div class="tg-btn-row">
+                <a href="https://t.me/+6b5DIM_RyrllMzE0" target="_blank" rel="noopener" class="tg-btn tg-btn-group" onclick="closeTelegramPrompt()">
+                    💬 Join Our Group
+                </a>
+                <a href="https://t.me/lasvegaschann" target="_blank" rel="noopener" class="tg-btn tg-btn-channel" onclick="closeTelegramPrompt()">
+                    📢 Join Our Channel
+                </a>
+            </div>
+            <button class="tg-skip" onclick="closeTelegramPrompt()">Maybe later</button>
+        </div>
+    </div>
+
+    <script>
+        function closeTelegramPrompt() {
+            document.getElementById('tg-modal-backdrop').classList.remove('active');
+        }
+        function maybeShowTelegramPrompt() {
+            // Show once per browser session, not on every dashboard visit
+            if (sessionStorage.getItem('tg_prompt_shown')) return;
+            sessionStorage.setItem('tg_prompt_shown', '1');
+            setTimeout(() => {
+                document.getElementById('tg-modal-backdrop').classList.add('active');
+            }, 600); // slight delay so it doesn't compete with the dashboard's own load-in
+        }
+    </script>
+
+    <div class="sidebar-overlay" id="overlay"></div>
+    
+    <aside class="sidebar" id="sidebar">
+        <div class="sb-header">
+            <span class="brand-font" style="color: var(--primary-magenta); font-size: 22px;">NIKE INVESTOR</span>
+            <button id="close-sb" style="background: none; border: none; font-size: 24px;">✕</button>
+        </div>
+        <nav class="sb-nav">
+            <a href="dashboard.html" class="sb-link">🏠 Dashboard</a>
+            <a href="plans.html" class="sb-link">📈 Investment Plans</a>
+            <a href="my-investments.html" class="sb-link">💰 My Investments</a>
+            <a href="wallet.html" class="sb-link">👛 Wallet</a>
+            <a href="deposit.html" class="sb-link" id="sb-deposit">📥 Deposit Funds</a>
+            <a href="withdraw.html" class="sb-link" id="sb-withdraw">📤 Withdraw</a>
+            <a href="daily-checkin.html" class="sb-link">📨 Telegram Task</a>
+            <a href="referrals.html" class="sb-link">👥 Referrals</a>
+            <a href="notifications.html" class="sb-link">🔔 Notifications</a>
+            <a href="profile.html" class="sb-link">👤 My Profile</a>
+            <a href="support.html" class="sb-link">🎧 Support</a>
+            <button id="logout-btn" class="sb-link logout">🚪 Logout</button>
+        </nav>
+    </aside>
+
+    <div class="dashboard-container">
+        <header class="top-bar">
+            <div class="user-greeting">
+                <p id="greeting-label">Welcome back,</p>
+                <h1 id="user-name"><div class="skeleton" style="width: 120px; height: 24px;"></div></h1>
+            </div>
+            <div class="top-icons">
+                <div class="icon-btn" id="open-sb">☰</div>
+                <div class="icon-btn">🔔<div class="badge"></div></div>
+            </div>
+        </header>
+
+        <div class="balance-hero">
+            <div class="balance-label">Available Balance</div>
+            <div class="balance-value" id="main-balance">₦0.00</div>
+            <div class="hero-actions" id="hero-actions">
+                <button class="action-btn btn-white" id="hero-deposit-btn">📥 Deposit</button>
+                <button class="action-btn btn-outline-white" id="hero-withdraw-btn">📤 Withdraw</button>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <div class="qa-item" onclick="location.href='plans.html'">📈 Invest</div>
+            <div class="qa-item" onclick="location.href='earnings.html'">💰 Earnings</div>
+            <div class="qa-item" onclick="location.href='daily-checkin.html'">📨 Telegram Task</div>
+            <div class="qa-item" onclick="location.href='gift-code.html'">🎁 Gift Code</div>
+            <div class="qa-item" onclick="location.href='referrals.html'">👥 Refer</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="label">Invested</span>
+                <div class="value" id="stat-invested">₦0.00</div>
+            </div>
+            <div class="stat-card">
+                <span class="label">Total Earned</span>
+                <div class="value" id="stat-earned">₦0.00</div>
+            </div>
+            <div class="stat-card">
+                <span class="label">Total Deposits</span>
+                <div class="value" id="stat-deposits">₦0.00</div>
+            </div>
+            <div class="stat-card">
+                <span class="label">Withdrawals</span>
+                <div class="value" id="stat-withdrawals">₦0.00</div>
+            </div>
+        </div>
+
+        <div class="sec-header">
+            <h2>Recent Transactions</h2>
+            <a href="transactions.html" id="view-all-tx">View All</a>
+        </div>
+        <div class="table-card" id="transaction-list">
+            <div style="padding: 30px; text-align: center; color: #999;">Loading transactions...</div>
+        </div>
+
+        <div class="refer-card">
+            <h3>Invite & Earn</h3>
+            <p>Earn up to 20% on Level 1 and 5% on Level 2 referrals.</p>
+            <div class="ref-code-box">
+                <span class="ref-code" id="my-ref-code">------</span>
+                <button class="copy-btn" id="copy-code">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav-island">
+        <a href="dashboard.html" class="nav-item active">
+            <div class="nav-icon">🏠</div>
+            <span>Home</span>
+        </a>
+        <a href="plans.html" class="nav-item">
+            <div class="nav-icon">📈</div>
+            <span>Plans</span>
+        </a>
+        <a href="wallet.html" class="nav-item">
+            <div class="nav-icon">👛</div>
+            <span>Wallet</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <div class="nav-icon">👤</div>
+            <span>Profile</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        import { resolveEffectiveUser, injectAdminBanner, adminizeLinks, adminCall } from './admin-view.js'
+
+        const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+        const Dashboard = {
+            session: null,
+            effectiveUserId: null,
+            isAdminMode: false,
+            wallet: null,
+
+            async init() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                this.session = session;
+
+                const { isAdminMode, effectiveUserId } = await resolveEffectiveUser(supabase, session);
+                this.isAdminMode = isAdminMode;
+                this.effectiveUserId = effectiveUserId;
+
+                this.setupUI();
+
+                // Show the Telegram prompt for real user sessions only —
+                // not when an admin is viewing this dashboard on someone else's behalf
+                if (!this.isAdminMode) {
+                    maybeShowTelegramPrompt();
+                }
+
+                if (this.isAdminMode) {
+                    injectAdminBanner();
+                    adminizeLinks(this.effectiveUserId);
+                    document.getElementById('greeting-label').innerText = 'Viewing dashboard for';
+                    document.getElementById('view-all-tx').href = `admin/transactions.html?user_id=${this.effectiveUserId}`;
+                    // Deposit/withdraw are self-service money-movement actions —
+                    // route to the admin balance adjuster instead of the user flow.
+                    document.getElementById('hero-deposit-btn').onclick = () => location.href = `admin/user-details.html?id=${this.effectiveUserId}`;
+                    document.getElementById('hero-withdraw-btn').onclick = () => location.href = `admin/user-details.html?id=${this.effectiveUserId}`;
+                    document.getElementById('hero-deposit-btn').innerText = '⚙️ Adjust Balance';
+                    document.getElementById('hero-withdraw-btn').innerText = '🔒 Suspend / Reactivate';
+                    document.getElementById('hero-withdraw-btn').onclick = () => this.toggleStatus();
+                } else {
+                    document.getElementById('hero-deposit-btn').onclick = () => location.href = 'deposit.html';
+                    document.getElementById('hero-withdraw-btn').onclick = () => location.href = 'withdraw.html';
+                }
+
+                await this.fetchData();
+            },
+
+            setupUI() {
+                const open = document.getElementById('open-sb');
+                const close = document.getElementById('close-sb');
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('overlay');
+
+                const toggle = () => {
+                    sidebar.classList.toggle('active');
+                    overlay.style.display = sidebar.classList.contains('active') ? 'block' : 'none';
+                };
+
+                [open, close, overlay].forEach(el => el.addEventListener('click', toggle));
+
+                document.getElementById('logout-btn').onclick = async () => {
+                    await supabase.auth.signOut();
+                    window.location.href = 'index.html';
+                };
+
+                document.getElementById('copy-code').onclick = () => {
+                    const code = document.getElementById('my-ref-code').innerText;
+                    navigator.clipboard.writeText(code);
+                    document.getElementById('copy-code').innerText = 'Copied!';
+                    setTimeout(() => document.getElementById('copy-code').innerText = 'Copy', 2000);
+                };
+            },
+
+            async toggleStatus() {
+                const { data: profile } = await supabase.from('profiles').select('status').eq('id', this.effectiveUserId).single();
+                const current = profile?.status || 'ACTIVE';
+                const next = current === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+                if (!confirm(`Change this user's status from ${current} to ${next}?`)) return;
+                try {
+                    await adminCall(this.session, 'update-user-status', { user_id: this.effectiveUserId, status: next });
+                    alert(`Status set to ${next}`);
+                } catch (e) {
+                    alert(e.message);
+                }
+            },
+
+            async fetchData() {
+                try {
+                    const { data: profile } = await supabase.from('profiles').select('*').eq('id', this.effectiveUserId).single();
+                    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', this.effectiveUserId).single();
+                    
+                    if (profile) {
+                        document.getElementById('user-name').innerText = this.isAdminMode ? profile.full_name : profile.full_name.split(' ')[0];
+                        document.getElementById('my-ref-code').innerText = profile.referral_code;
+                    }
+
+                    if (wallet) {
+                        this.wallet = wallet;
+                        document.getElementById('main-balance').innerText = `₦${Number(wallet.balance).toLocaleString()}`;
+                        document.getElementById('stat-invested').innerText = `₦${Number(wallet.investment_balance || 0).toLocaleString()}`;
+                        document.getElementById('stat-earned').innerText = `₦${Number(wallet.total_earned).toLocaleString()}`;
+                        document.getElementById('stat-deposits').innerText = `₦${Number(wallet.total_deposited).toLocaleString()}`;
+                        document.getElementById('stat-withdrawals').innerText = `₦${Number(wallet.total_withdrawn).toLocaleString()}`;
+                    }
+
+                    const { data: txs } = await supabase.from('transactions').select('*').eq('user_id', this.effectiveUserId).order('created_at', { ascending: false }).limit(5);
+                    this.renderTransactions(txs);
+
+                } catch (e) {
+                    console.error("Data fetch error", e);
+                }
+            },
+
+            renderTransactions(txs) {
+                const container = document.getElementById('transaction-list');
+                if (!txs || txs.length === 0) {
+                    container.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">No transactions yet.</div>';
+                    return;
+                }
+
+                container.innerHTML = txs.map(tx => `
+                    <div class="tr-row">
+                        <div class="tr-info">
+                            <h4>${tx.type.replace('_', ' ')}</h4>
+                            <span>${new Date(tx.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div class="tr-amt ${tx.amount > 0 ? 'amt-pos' : 'amt-neg'}">
+                            ${tx.amount > 0 ? '+' : ''}₦${Math.abs(tx.amount).toLocaleString()}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => Dashboard.init());
+    </script>
+</body>
 </html>

@@ -1,18 +1,247 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Nike Investor — Blacktop Ledger investment platform concept." />
-    <title>Withdraw · Nike Investor</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="/assets/media/nike-investor-mark.png" />
-    <link rel="stylesheet" href="/assets/styles.css" />
-  </head>
-  <body data-page="withdraw" data-mode="member">
-    <main id="app-root" aria-live="polite"></main>
-    <script type="module" src="/assets/app.js"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw | NIKE INVESTOR</title>
+    <style>
+        :root {
+            --pink: #090909;
+            --green: #111111;
+            --bg: #f7f7f7;
+        }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .card { background: white; border-radius: 20px; border: 1px solid #eeeeee; padding: 25px; box-shadow: 0 10px 30px rgba(9, 9, 9, 0.05); margin-bottom: 20px; }
+        .btn-pay { background: var(--pink); color: white; border: none; padding: 16px; border-radius: 50px; width: 100%; font-weight: 700; cursor: pointer; font-size: 15px; }
+        .btn-pay:disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn-ghost { background: white; color: var(--pink); border: 1px solid #eeeeee; padding: 12px; border-radius: 50px; width: 100%; font-weight: 700; cursor: pointer; }
+        .input-group { margin: 16px 0; }
+        label { font-weight: 700; color: var(--pink); font-size: 13px; display: block; margin-bottom: 6px; }
+        input, select { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #eeeeee; font-size: 15px; box-sizing: border-box; font-family: inherit; }
+        .error-text { color: #252525; font-size: 13px; margin-top: 8px; display: none; }
+        .success-text { color: var(--green); font-size: 13px; margin-top: 8px; display: none; }
+        .account-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #eeeeee; border-radius: 12px; margin-bottom: 10px; cursor: pointer; }
+        .account-row.selected { border-color: var(--pink); background: #ffffff; }
+        .account-row .bank { font-weight: 700; font-size: 14px; }
+        .account-row .acct { font-size: 12px; color: #666; }
+        .empty-state { font-size: 13px; color: #999; text-align: center; padding: 15px 0; }
+        .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+        .modal-backdrop.active { display: flex; }
+        .modal-box { background: white; border-radius: 20px; padding: 25px; width: 100%; max-width: 400px; }
+    </style>
+    <link rel="stylesheet" href="assets/nike-monochrome.css">
+</head>
+<body>
+    <div class="card">
+        <h2 style="color: var(--pink); margin-top: 0;">Withdraw Funds</h2>
+        <p style="color: #666; font-size: 14px;">Transfer your balance to your bank account.</p>
+
+        <div class="input-group">
+            <label>Amount (₦)</label>
+            <input type="number" id="withdraw-amount" placeholder="Enter amount">
+        </div>
+
+        <label>Payout Account</label>
+        <div id="accounts-list"><div class="empty-state">Loading accounts...</div></div>
+        <button class="btn-ghost" id="btn-add-account" style="margin-top: 10px;">+ Add Payout Account</button>
+
+        <button class="btn-pay" id="withdraw-btn" style="margin-top: 20px;">REQUEST WITHDRAWAL</button>
+        <div id="error-text" class="error-text"></div>
+        <div id="success-text" class="success-text"></div>
+    </div>
+
+    <!-- Add Account Modal -->
+    <div class="modal-backdrop" id="modal-backdrop">
+        <div class="modal-box">
+            <h3 style="color: var(--pink); margin-top: 0;">Add Payout Account</h3>
+            <div class="input-group">
+                <label>Bank</label>
+                <select id="bank-select"><option value="">Loading banks...</option></select>
+            </div>
+            <div class="input-group">
+                <label>Account Number</label>
+                <input type="text" id="account-number">
+            </div>
+            <div class="input-group">
+                <label>Account Name</label>
+                <input type="text" id="account-name">
+            </div>
+            <div id="modal-error" class="error-text"></div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn-ghost" id="modal-cancel">Cancel</button>
+                <button class="btn-pay" id="modal-save">Save Account</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+        const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+        let session = null;
+        let accounts = [];
+        let selectedAccountId = null;
+
+        const errorText = document.getElementById('error-text');
+        const successText = document.getElementById('success-text');
+        const withdrawBtn = document.getElementById('withdraw-btn');
+
+        function showError(msg) {
+            successText.style.display = 'none';
+            errorText.textContent = msg;
+            errorText.style.display = 'block';
+        }
+        function showSuccess(msg) {
+            errorText.style.display = 'none';
+            successText.textContent = msg;
+            successText.style.display = 'block';
+        }
+
+        async function apiCall(action, method, body) {
+            const opts = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(`/api/finance?resource=withdrawals&action=${action}`, opts);
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.message || 'Request failed');
+            return json;
+        }
+
+        async function loadAccounts() {
+            const list = document.getElementById('accounts-list');
+            try {
+                const { data } = await apiCall('accounts', 'GET');
+                accounts = data;
+                if (accounts.length === 0) {
+                    list.innerHTML = '<div class="empty-state">No payout accounts yet — add one below.</div>';
+                    return;
+                }
+                const defaultAcc = accounts.find(a => a.is_default) || accounts[0];
+                selectedAccountId = defaultAcc.id;
+                renderAccounts();
+            } catch (e) {
+                list.innerHTML = `<div class="empty-state">Could not load accounts: ${e.message}</div>`;
+            }
+        }
+
+        function renderAccounts() {
+            const list = document.getElementById('accounts-list');
+            list.innerHTML = accounts.map(a => `
+                <div class="account-row ${a.id === selectedAccountId ? 'selected' : ''}" data-id="${a.id}">
+                    <div>
+                        <div class="bank">${a.bank_name}</div>
+                        <div class="acct">${a.account_name} • ${a.account_number}</div>
+                    </div>
+                    ${a.is_default ? '<span style="font-size:11px; color:#999;">Default</span>' : ''}
+                </div>
+            `).join('');
+            list.querySelectorAll('.account-row').forEach(row => {
+                row.onclick = () => {
+                    selectedAccountId = row.dataset.id;
+                    renderAccounts();
+                };
+            });
+        }
+
+        async function loadBankList() {
+            const select = document.getElementById('bank-select');
+            try {
+                const { data } = await apiCall('bank-list', 'GET');
+                select.innerHTML = '<option value="">Select a bank</option>' +
+                    data.map(b => `<option value="${b.code}">${b.name}</option>`).join('');
+            } catch (e) {
+                select.innerHTML = '<option value="">Could not load banks</option>';
+            }
+        }
+
+        document.getElementById('btn-add-account').onclick = async () => {
+            document.getElementById('modal-backdrop').classList.add('active');
+            await loadBankList();
+        };
+        document.getElementById('modal-cancel').onclick = () => {
+            document.getElementById('modal-backdrop').classList.remove('active');
+        };
+        document.getElementById('modal-save').onclick = async () => {
+            const modalError = document.getElementById('modal-error');
+            modalError.style.display = 'none';
+
+            const bank_code = document.getElementById('bank-select').value;
+            const account_number = document.getElementById('account-number').value.trim();
+            const account_name = document.getElementById('account-name').value.trim();
+
+            if (!bank_code || !account_number || !account_name) {
+                modalError.textContent = 'All fields are required';
+                modalError.style.display = 'block';
+                return;
+            }
+
+            try {
+                await apiCall('add-account', 'POST', {
+                    bank_code, account_number, account_name, is_default: accounts.length === 0
+                });
+                document.getElementById('modal-backdrop').classList.remove('active');
+                await loadAccounts();
+            } catch (e) {
+                modalError.textContent = e.message;
+                modalError.style.display = 'block';
+            }
+        };
+
+        withdrawBtn.onclick = async () => {
+            errorText.style.display = 'none';
+            successText.style.display = 'none';
+
+            const amount = Number(document.getElementById('withdraw-amount').value);
+            if (!amount || amount <= 0) return showError('Enter a valid amount');
+            if (amount < 1000) return showError('Minimum withdrawal is ₦1,000');
+            if (!selectedAccountId) return showError('Select or add a payout account first');
+
+            withdrawBtn.disabled = true;
+            withdrawBtn.innerText = 'SUBMITTING...';
+
+            try {
+                await apiCall('withdraw', 'POST', { amount, payout_account_id: selectedAccountId });
+                showSuccess('Withdrawal request submitted — pending admin review.');
+                document.getElementById('withdraw-amount').value = '';
+            } catch (e) {
+                showError(e.message);
+            } finally {
+                withdrawBtn.disabled = false;
+                withdrawBtn.innerText = 'REQUEST WITHDRAWAL';
+            }
+        };
+
+        async function checkWithdrawalLock() {
+            try {
+                const res = await fetch('/api/admin?resource=settings&action=public');
+                const json = await res.json();
+                const row = (json.data || []).find(s => s.key === 'withdrawals_locked');
+                if (row?.value === 'true') {
+                    withdrawBtn.disabled = true;
+                    withdrawBtn.innerText = 'WITHDRAWALS TEMPORARILY PAUSED';
+                    showError('Withdrawals are temporarily paused. Please check back later.');
+                    return true;
+                }
+            } catch (e) {
+                console.error('Could not check withdrawal lock state:', e);
+            }
+            return false;
+        }
+
+        (async function init() {
+            const { data: { session: s } } = await supabase.auth.getSession();
+            if (!s) return showError('Your session has expired. Please log in again.');
+            session = s;
+            const locked = await checkWithdrawalLock();
+            if (locked) return;
+            await loadAccounts();
+        })();
+    </script>
+</body>
 </html>

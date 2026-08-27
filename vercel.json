@@ -1,8 +1,8 @@
 {
-  "framework": "vite",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "crons": [
-    { "path": "/api/cron", "schedule": "0 23 * * *" }
+    {
+      "path": "/api/cron",
+      "schedule": "0 23 * * *"
+    }
   ]
 }
